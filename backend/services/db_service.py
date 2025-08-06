@@ -32,5 +32,15 @@ def query_memories(namespace: str, embedding: list[float], filters: dict, top_k:
     cursor.execute(base_query, params)
     return cursor.fetchall()
 
+def insert_memory_query(namespace: str, query_text: str, filters: dict, top_k: int):
+    cursor.execute(
+        """
+        INSERT INTO memory_queries (namespace, query_text, filters, top_k)
+        VALUES (%s, %s, %s, %s)
+        """,
+        (namespace, query_text, json.dumps(filters), top_k)
+    )
+    conn.commit()
+
 def commit():
     conn.commit()
