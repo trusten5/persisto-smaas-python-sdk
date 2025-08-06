@@ -1,7 +1,7 @@
 # backend/routers/memory.py
 from fastapi import APIRouter, Request
 from pydantic import BaseModel
-from memory_service import save_memory_to_db, query_similar_memories
+from services.memory_service import save_memory_to_db, query_similar_memories
 
 router = APIRouter()
 
