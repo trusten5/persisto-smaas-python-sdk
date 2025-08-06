@@ -4,6 +4,9 @@ import os
 import json
 from openai import OpenAI
 from db import conn, cursor
+import re
+from typing import List
+from utils.chunker import chunk_text
 
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
@@ -17,15 +20,20 @@ def embed_text(text: str) -> list[float]:
     return response.data[0].embedding
 
 def save_memory_to_db(namespace: str, content: str, metadata: dict):
-    embedding = embed_text(content)
-    cursor.execute(
-        """
-        INSERT INTO memories (namespace, content, metadata, embedding)
-        VALUES (%s, %s, %s, %s)
-        """,
-        (namespace, content, json.dumps(metadata), embedding)
-    )
+    chunks = chunk_text(content)
+
+    for chunk in chunks:
+        embedding = embed_text(chunk)
+        cursor.execute(
+            """
+            INSERT INTO memories (namespace, content, metadata, embedding)
+            VALUES (%s, %s, %s, %s)
+            """,
+            (namespace, chunk, json.dumps(metadata), embedding)
+        )
+
     conn.commit()
+
 
 def query_similar_memories(namespace: str, query: str, filters: dict = {}, top_k: int = 5):
     query_embedding = embed_text(query)
