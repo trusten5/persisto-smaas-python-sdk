@@ -26,3 +26,36 @@ def save_memory_to_db(namespace: str, content: str, metadata: dict):
         (namespace, content, json.dumps(metadata), embedding)
     )
     conn.commit()
+
+def query_similar_memories(namespace: str, query: str, filters: dict = {}, top_k: int = 5):
+    query_embedding = embed_text(query)
+
+    base_query = """
+        SELECT content, metadata, embedding <-> %s::vector AS similarity
+        FROM memories
+        WHERE namespace = %s
+    """
+    params = [query_embedding, namespace]
+
+    # Dynamically add metadata filters
+    for key, value in filters.items():
+        base_query += f" AND metadata->>%s = %s"
+        params.extend([key, value])
+
+    base_query += """
+        ORDER BY embedding <-> %s::vector
+        LIMIT %s
+    """
+    params.extend([query_embedding, top_k])
+
+    cursor.execute(base_query, params)
+    rows = cursor.fetchall()
+    
+    return [
+        {
+            "content": row[0],
+            "metadata": row[1],
+            "similarity": row[2]
+        }
+        for row in rows
+    ]
