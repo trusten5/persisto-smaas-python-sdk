@@ -1,0 +1,48 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+env/
+venv/
+
+# VSCode
+.vscode/
+
+# Environment variables
+.env
+.env.*
+
+# macOS
+.DS_Store
+
+# Jupyter notebooks
+.ipynb_checkpoints/
+
+# Log files
+*.log
+
+# MyPy and Pylint
+.mypy_cache/
+.pyre/
+.pytype/
+.pylint.d/
+
+# Pytest
+.cache/
+htmlcov/
+coverage.xml
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+
+# Node (if SDK folder later)
+node_modules/
+
+# Supabase CLI artifacts (if used)
+.supabase/
+supabase/.temp/
