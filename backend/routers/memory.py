@@ -3,6 +3,8 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 from services.memory_service import MemoryService
 from utils.auth import get_user_id_from_api_key
+from datetime import datetime, timedelta
+from typing import Optional
 
 router = APIRouter()
 memory_service = MemoryService()
@@ -13,6 +15,7 @@ class MemoryPayload(BaseModel):
     namespace: str
     content: str
     metadata: dict = {}
+    ttl_seconds: Optional[int] = None
 
 class QueryPayload(BaseModel):
     namespace: str
@@ -29,7 +32,19 @@ class MemoryDeleteRequest(BaseModel):
 @router.post("/memory/save")
 async def save_memory(payload: MemoryPayload, request: Request):
     user_id = await get_user_id_from_api_key(request)
-    memory_service.save_memory_to_db(payload.namespace, payload.content, payload.metadata, user_id=user_id)
+
+    # 🔹 Compute expires_at from ttl_seconds
+    expires_at = None
+    if payload.ttl_seconds:
+        expires_at = datetime.utcnow() + timedelta(seconds=payload.ttl_seconds)
+
+    memory_service.save_memory_to_db(
+        namespace=payload.namespace,
+        content=payload.content,
+        metadata=payload.metadata,
+        user_id=user_id,
+        expires_at=expires_at  # 🧠 Pass to DB
+    )
     return {"status": "saved"}
 
 @router.post("/memory/query")

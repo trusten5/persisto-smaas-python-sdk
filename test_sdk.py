@@ -1,14 +1,17 @@
-# test_sdk.py
 from sdk.python.persisto.client import PersistoClient
 import os
+import time
 from dotenv import load_dotenv
+from uuid import uuid4
+unique_ttl_content = f"This memory will self-destruct: test-{uuid4()}"
+
 
 load_dotenv()
 
 api_key = os.getenv("PERSISTO_API_KEY")
-
 client = PersistoClient(api_key)
 
+# 🔹 Standard Save Tests
 print("\nSaving memory...")
 save_response = client.save(
     namespace="auth-test",
@@ -16,6 +19,7 @@ save_response = client.save(
     metadata={"source": "sdk-auth"}
 )
 print("Save response 1:", save_response)
+
 save_response = client.save(
     namespace="demo-test",
     content="I like soccer",
@@ -30,6 +34,27 @@ save_response = client.save(
 )
 print("Save response 3:", save_response)
 
+# 🔹 TTL Test
+print("\nSaving short-lived memory (TTL = 3s)...")
+ttl_response = client.save(
+    namespace="auth-test",
+    content=unique_ttl_content,
+    metadata={"source": "ttl-test"},
+    ttl_seconds=3
+)
+print("TTL save response:", ttl_response)
+
+print("Waiting 4 seconds for TTL to expire...")
+time.sleep(4)
+
+print("Querying for expired memory...")
+query_results = client.query(
+    namespace="auth-test",
+    query="self-destruct"
+)
+print("Query results (should NOT include TTL memory):", query_results)
+
+# 🔹 Regular Query Test
 print("\nQuerying memory...")
 query_results = client.query(
     namespace="auth-test",
@@ -37,6 +62,7 @@ query_results = client.query(
 )
 print("Query results:", query_results)
 
+# 🔹 Delete Test
 print("\nDeleting memory...")
 delete_response = client.delete(
     namespace="auth-test",
@@ -44,5 +70,6 @@ delete_response = client.delete(
 )
 print("Delete response:", delete_response)
 
+# 🔹 List Namespaces Test
 print("\nListing namespaces...")
 print("Namespaces:", client.list_namespaces())

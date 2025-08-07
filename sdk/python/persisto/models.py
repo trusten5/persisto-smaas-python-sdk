@@ -8,7 +8,7 @@ class MemorySaveRequest(BaseModel):
     namespace: str
     content: str
     metadata: Dict = {}  # Optional but default to empty dict
-
+    ttl_seconds: Optional[int] = None
 
 class QueryRequest(BaseModel):
     namespace: str

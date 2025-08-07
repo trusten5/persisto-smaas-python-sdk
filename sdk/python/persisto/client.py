@@ -17,14 +17,15 @@ class PersistoClient:
             "Content-Type": "application/json"
         }
 
-    def save(self, namespace: str, content: str, metadata: Optional[dict] = None) -> dict:
+    def save(self, namespace: str, content: str, metadata: Optional[dict] = None, ttl_seconds: Optional[int] = None) -> dict:
         """
         Save content to a namespace with optional metadata.
         """
         payload = MemorySaveRequest(
             namespace=namespace,
             content=content,
-            metadata=metadata or {}
+            metadata=metadata or {},
+            ttl_seconds = ttl_seconds
         )
         res = requests.post(
             f"{self.base_url}/memory/save",

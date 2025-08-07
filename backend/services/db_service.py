@@ -1,14 +1,17 @@
 # backend/services/db_service.py
 import json
 from db import cursor, conn
+from typing import Optional
+from datetime import datetime
 
-def insert_memory(user_id: str, namespace: str, content: str, metadata: dict, embedding: list[float]):
+def insert_memory(user_id: str, namespace: str, content: str, metadata: dict, embedding: list[float], expires_at: Optional[datetime] = None
+):
     cursor.execute(
         """
-        INSERT INTO memories (user_id, namespace, content, metadata, embedding)
-        VALUES (%s, %s, %s, %s, %s)
+        INSERT INTO memories (user_id, namespace, content, metadata, embedding, expires_at)
+        VALUES (%s, %s, %s, %s, %s, %s)
         """,
-        (user_id, namespace, content, json.dumps(metadata), embedding)
+        (user_id, namespace, content, json.dumps(metadata), embedding, expires_at)
     )
 
 def delete_memories(user_id: str, namespace: str, content: str | None, metadata: dict | None) -> int:
@@ -29,25 +32,50 @@ def delete_memories(user_id: str, namespace: str, content: str | None, metadata:
     return count
 
 def query_memories(user_id: str, namespace: str, embedding: list[float], filters: dict, top_k: int):
+    print("[DEBUG] expires_at filter active")
+
     base_query = """
         SELECT content, metadata, embedding <-> %s::vector AS similarity
         FROM memories
         WHERE user_id = %s AND namespace = %s
+          AND (expires_at IS NULL OR expires_at > timezone('UTC', now()))
     """
+
     params = [embedding, user_id, namespace]
 
     for key, value in filters.items():
-        base_query += f" AND metadata->>%s = %s"
-        params.extend([key, value])
+        base_query += f" AND metadata->>'{key}' = %s"
+        params.append(value)
 
     base_query += """
         ORDER BY embedding <-> %s::vector
         LIMIT %s
     """
+    # ✅ These must come after all filters are added
     params.extend([embedding, top_k])
 
+    print("[DEBUG] SQL Query:", base_query)
+
     cursor.execute(base_query, params)
-    return cursor.fetchall()
+    results = cursor.fetchall()
+
+    print("[DEBUG] Results returned:", len(results))
+    for row in results:
+        if row[0] == "This memory will self-destruct":
+            print("[DEBUG] ❌ Expired memory leaked through:", row)
+    for row in results:
+        if "self-destruct" in row[0]:
+            print("[DEBUG] ⏱ Expired? Checking timestamp in DB...")
+            cursor.execute(
+                "SELECT expires_at FROM memories WHERE content = %s AND user_id = %s",
+                (row[0], user_id)
+            )
+            expiration_check = cursor.fetchall()
+            print("[DEBUG] → expires_at values:", expiration_check)
+
+
+    return results
+
 
 def insert_memory_query(user_id: str, namespace: str, query_text: str, filters: dict, top_k: int):
     cursor.execute(
