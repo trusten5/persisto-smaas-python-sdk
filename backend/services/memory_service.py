@@ -1,5 +1,5 @@
 from utils.chunker import chunk_text
-from services.db_service import insert_memory, query_memories, commit, insert_memory_query
+from services.db_service import insert_memory, query_memories, commit, insert_memory_query, delete_memories
 from services.embedder import BaseEmbedder
 from services.openai_embedder import OpenAIEmbedder
 
@@ -27,3 +27,6 @@ class MemoryService:
             }
             for row in rows
         ]
+    
+    def delete_memory(self, namespace: str, content: str | None, metadata: dict | None) -> int:
+        return delete_memories(namespace, content, metadata)

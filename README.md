@@ -1,4 +1,3 @@
-````markdown
 # 🧠 Persisto AI
 
 **Semantic Memory-as-a-Service (SMaaS)** for LLM applications — built to give your AI apps long-term memory out of the box.
@@ -141,5 +140,3 @@ backend/
 ## 🧠 Persisto gives your AI a brain.
 
 Build intelligent, context-aware LLM applications — faster and simpler.
-Let me know when you want to build the Python SDK and I’ll generate the full working code and test instructions.
-```

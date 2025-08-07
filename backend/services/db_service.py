@@ -11,6 +11,23 @@ def insert_memory(namespace: str, content: str, metadata: dict, embedding: list[
         (namespace, content, json.dumps(metadata), embedding)
     )
 
+def delete_memories(namespace: str, content: str | None, metadata: dict | None) -> int:
+    query = "DELETE FROM memories WHERE namespace = %s"
+    params = [namespace]
+
+    if content:
+        query += " AND content = %s"
+        params.append(content)
+
+    if metadata:
+        query += " AND metadata @> %s::jsonb"
+        params.append(json.dumps(metadata))
+
+    cursor.execute(query, params)
+    count = cursor.rowcount
+    commit()
+    return count
+
 def query_memories(namespace: str, embedding: list[float], filters: dict, top_k: int):
     base_query = """
         SELECT content, metadata, embedding <-> %s::vector AS similarity
