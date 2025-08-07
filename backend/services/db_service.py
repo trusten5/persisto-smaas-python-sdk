@@ -2,18 +2,18 @@
 import json
 from db import cursor, conn
 
-def insert_memory(namespace: str, content: str, metadata: dict, embedding: list[float]):
+def insert_memory(user_id: str, namespace: str, content: str, metadata: dict, embedding: list[float]):
     cursor.execute(
         """
-        INSERT INTO memories (namespace, content, metadata, embedding)
-        VALUES (%s, %s, %s, %s)
+        INSERT INTO memories (user_id, namespace, content, metadata, embedding)
+        VALUES (%s, %s, %s, %s, %s)
         """,
-        (namespace, content, json.dumps(metadata), embedding)
+        (user_id, namespace, content, json.dumps(metadata), embedding)
     )
 
-def delete_memories(namespace: str, content: str | None, metadata: dict | None) -> int:
-    query = "DELETE FROM memories WHERE namespace = %s"
-    params = [namespace]
+def delete_memories(user_id: str, namespace: str, content: str | None, metadata: dict | None) -> int:
+    query = "DELETE FROM memories WHERE user_id = %s AND namespace = %s"
+    params = [user_id, namespace]
 
     if content:
         query += " AND content = %s"
@@ -28,13 +28,13 @@ def delete_memories(namespace: str, content: str | None, metadata: dict | None) 
     commit()
     return count
 
-def query_memories(namespace: str, embedding: list[float], filters: dict, top_k: int):
+def query_memories(user_id: str, namespace: str, embedding: list[float], filters: dict, top_k: int):
     base_query = """
         SELECT content, metadata, embedding <-> %s::vector AS similarity
         FROM memories
-        WHERE namespace = %s
+        WHERE user_id = %s AND namespace = %s
     """
-    params = [embedding, namespace]
+    params = [embedding, user_id, namespace]
 
     for key, value in filters.items():
         base_query += f" AND metadata->>%s = %s"
@@ -49,13 +49,13 @@ def query_memories(namespace: str, embedding: list[float], filters: dict, top_k:
     cursor.execute(base_query, params)
     return cursor.fetchall()
 
-def insert_memory_query(namespace: str, query_text: str, filters: dict, top_k: int):
+def insert_memory_query(user_id: str, namespace: str, query_text: str, filters: dict, top_k: int):
     cursor.execute(
         """
-        INSERT INTO memory_queries (namespace, query_text, filters, top_k)
-        VALUES (%s, %s, %s, %s)
+        INSERT INTO memory_queries (user_id, namespace, query_text, filters, top_k)
+        VALUES (%s, %s, %s, %s, %s)
         """,
-        (namespace, query_text, json.dumps(filters), top_k)
+        (user_id, namespace, query_text, json.dumps(filters), top_k)
     )
     conn.commit()
 

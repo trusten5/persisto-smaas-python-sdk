@@ -1,7 +1,8 @@
 # backend/routers/memory.py
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 from services.memory_service import MemoryService
+from utils.auth import get_user_id_from_api_key
 
 router = APIRouter()
 memory_service = MemoryService()
@@ -26,21 +27,25 @@ class MemoryDeleteRequest(BaseModel):
 # Endpoints
 
 @router.post("/memory/save")
-async def save_memory(payload: MemoryPayload):
-    memory_service.save_memory_to_db(payload.namespace, payload.content, payload.metadata)
+async def save_memory(payload: MemoryPayload, request: Request):
+    user_id = await get_user_id_from_api_key(request)
+    memory_service.save_memory_to_db(payload.namespace, payload.content, payload.metadata, user_id=user_id)
     return {"status": "saved"}
 
 @router.post("/memory/query")
-async def query_memory(payload: QueryPayload):
-    results = memory_service.query_similar_memories(payload.namespace, payload.query, payload.filters)
+async def query_memory(payload: QueryPayload, request: Request):
+    user_id = await get_user_id_from_api_key(request)
+    results = memory_service.query_similar_memories(payload.namespace, payload.query, payload.filters, user_id=user_id)
     return {"results": results}
 
 @router.delete("/memory/delete")
-def delete_memory(req: MemoryDeleteRequest):
+async def delete_memory(req: MemoryDeleteRequest, request: Request):
+    user_id = await get_user_id_from_api_key(request)
     deleted_count = memory_service.delete_memory(
         namespace=req.namespace,
         content=req.content,
-        metadata=req.metadata
+        metadata=req.metadata,
+        user_id=user_id
     )
     if deleted_count == 0:
         raise HTTPException(status_code=404, detail="No matching memory found.")

@@ -1,30 +1,31 @@
+# test_sdk.py
 from sdk.python.persisto.client import PersistoClient
 
 client = PersistoClient(api_key="your-api-key")
 
-# Save memory
+API_KEY = "ekN79KPtP476Un-TyZEVlSMqocUVfBIYRTQEEkeN6AI"
+
+client = PersistoClient(api_key=API_KEY)
+
 print("\nSaving memory...")
 save_response = client.save(
-    namespace="test",
-    content="The user asked for a summary of a 10-K document",
-    metadata={"type": "summary", "source": "api-test"}
+    namespace="auth-test",
+    content="This memory should be saved with auth",
+    metadata={"source": "sdk-auth"}
 )
 print("Save response:", save_response)
 
-# Query memory
 print("\nQuerying memory...")
 query_results = client.query(
-    namespace="test",
-    query="What did the user ask?",
-    filters={"type": "summary"},
-    top_k=1
+    namespace="auth-test",
+    query="What memory did I just save?"
 )
 print("Query results:", query_results)
 
-# Delete memory
 print("\nDeleting memory...")
 delete_response = client.delete(
-    namespace="test",
-    content="The user asked for a summary of a 10-K document"
+    namespace="auth-test",
+    metadata={"source": "sdk-auth"}
 )
 print("Delete response:", delete_response)
+

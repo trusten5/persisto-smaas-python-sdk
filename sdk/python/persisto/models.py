@@ -1,14 +1,23 @@
 # sdk/python/persisto/models.py
+
 from pydantic import BaseModel
 from typing import Optional, Dict
+
 
 class MemorySaveRequest(BaseModel):
     namespace: str
     content: str
-    metadata: Optional[Dict] = {}
+    metadata: Dict = {}  # Optional but default to empty dict
+
 
 class QueryRequest(BaseModel):
     namespace: str
     query: str
-    filters: Optional[Dict] = {}
+    filters: Dict = {}  # Optional but default to empty dict
     top_k: int = 5
+
+
+class DeleteRequest(BaseModel):
+    namespace: str
+    content: Optional[str] = None
+    metadata: Optional[Dict] = None
