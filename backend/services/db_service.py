@@ -87,6 +87,32 @@ def insert_memory_query(user_id: str, namespace: str, query_text: str, filters: 
     )
     conn.commit()
 
+def get_memory_queries(user_id: str, namespace: Optional[str] = None, start_date: Optional[str] = None, end_date: Optional[str] = None):
+    query = """
+        SELECT namespace, query_text, filters, top_k, timestamp
+        FROM memory_queries
+        WHERE user_id = %s
+    """
+    params = [user_id]
+
+    if namespace:
+        query += " AND namespace = %s"
+        params.append(namespace)
+    
+    if start_date:
+        query += " AND timestamp >= %s"
+        params.append(start_date)
+
+    if end_date:
+        query += " AND timestamp <= %s"
+        params.append(end_date)
+
+    query += " ORDER BY timestamp DESC LIMIT 100"
+
+    cursor.execute(query, params)
+    return cursor.fetchall()
+
+
 def get_namespaces_by_user(user_id: str) -> list[str]:
     cursor.execute(
         "SELECT DISTINCT namespace FROM memories WHERE user_id = %s",

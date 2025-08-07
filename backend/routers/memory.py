@@ -1,5 +1,5 @@
 # backend/routers/memory.py
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request, Query
 from pydantic import BaseModel
 from services.memory_service import MemoryService
 from utils.auth import get_user_id_from_api_key
@@ -70,3 +70,9 @@ async def delete_memory(req: MemoryDeleteRequest, request: Request):
 async def get_namespaces(request: Request):
     user_id = await get_user_id_from_api_key(request)
     return {"namespaces": memory_service.list_namespaces(user_id)}
+
+@router.get("/queries/list")
+async def list_queries(request: Request, namespace: Optional[str] = Query(None), start_date: Optional[str] = Query(None), end_date: Optional[str] = Query(None)):
+    user_id = await get_user_id_from_api_key(request)
+    results = memory_service.list_queries(user_id, namespace, start_date, end_date)
+    return {"queries": results}

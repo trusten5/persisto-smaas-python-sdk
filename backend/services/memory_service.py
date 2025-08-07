@@ -1,6 +1,6 @@
 # backend/services/memory_service.py
 from utils.chunker import chunk_text
-from services.db_service import insert_memory, query_memories, commit, insert_memory_query, delete_memories, get_namespaces_by_user
+from services.db_service import insert_memory, query_memories, commit, insert_memory_query, delete_memories, get_namespaces_by_user, get_memory_queries
 from services.embedder import BaseEmbedder
 from services.openai_embedder import OpenAIEmbedder
 from typing import Optional
@@ -26,6 +26,19 @@ class MemoryService:
                 "content": row[0],
                 "metadata": row[1],
                 "similarity": row[2]
+            }
+            for row in rows
+        ]
+    
+    def list_queries(self, user_id: str, namespace: Optional[str] = None, start_date: Optional[str] = None, end_date: Optional[str] = None):
+        rows = get_memory_queries(user_id, namespace, start_date, end_date)
+        return [
+            {
+                "namespace": row[0],
+                "query_text": row[1],
+                "filters": row[2],
+                "top_k": row[3],
+                "timestamp": row[4].isoformat()
             }
             for row in rows
         ]

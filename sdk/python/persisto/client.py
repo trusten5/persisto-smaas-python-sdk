@@ -77,4 +77,22 @@ class PersistoClient:
         res = requests.get(f"{self.base_url}/memory/namespaces", headers=self.headers)
         res.raise_for_status()
         return res.json()["namespaces"]
+    
+    def list_queries(self, namespace: Optional[str] = None, start_date: Optional[str] = None, end_date: Optional[str] = None) -> list:
+        params = {}
+        if namespace:
+            params["namespace"] = namespace
+        if start_date:
+            params["start_date"] = start_date
+        if end_date:
+            params["end_date"] = end_date
+
+        res = requests.get(
+            f"{self.base_url}/queries/list",
+            headers=self.headers,
+            params=params
+        )
+        res.raise_for_status()
+        return res.json()["queries"]
+
 

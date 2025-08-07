@@ -73,3 +73,8 @@ print("Delete response:", delete_response)
 # 🔹 List Namespaces Test
 print("\nListing namespaces...")
 print("Namespaces:", client.list_namespaces())
+
+print("\nListing past queries...")
+queries = client.list_queries(namespace="auth-test")
+for q in queries:
+    print(q)
