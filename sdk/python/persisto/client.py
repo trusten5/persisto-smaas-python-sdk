@@ -1,153 +1,197 @@
 # sdk/python/persisto/client.py
+from __future__ import annotations
+
+import os
+import time
+from typing import Any, Dict, List, Optional
 
 import requests
-from typing import Optional
-from tenacity import retry, stop_after_attempt, wait_fixed, RetryError, retry_if_exception_type
-from .models import MemorySaveRequest, QueryRequest, DeleteRequest
 
-# 🔹 Custom SDK Errors
-class PersistoError(Exception): pass
-class PersistoAuthError(PersistoError): pass
-class PersistoNotFoundError(PersistoError): pass
-class PersistoServerError(PersistoError): pass
 
+# =========================
+# Errors
+# =========================
+
+class PersistoError(Exception):
+    """Base SDK error with optional HTTP status and raw body."""
+    def __init__(self, message: str, status: Optional[int] = None, body: Optional[str] = None):
+        super().__init__(message)
+        self.status = status
+        self.body = body
+
+
+class PersistoAuthError(PersistoError):
+    """401/403 authentication/authorization errors."""
+
+
+class PersistoNotFoundError(PersistoError):
+    """404 not found errors."""
+
+
+class PersistoRateLimitError(PersistoError):
+    """429 rate-limit errors."""
+
+
+# =========================
+# Client
+# =========================
 
 class PersistoClient:
-    def __init__(self, api_key: str, base_url: str = "http://localhost:8000"):
-        """
-        Initialize the PersistoClient.
+    """
+    Minimal Python client for Persisto.
 
-        Args:
-            api_key (str): Your Persisto API key.
-            base_url (str): The base URL of the Persisto server (default: localhost).
-        """
+    Constructor:
+        PersistoClient(api_key: str, base_url: Optional[str] = None, timeout: int = 15, retries: int = 3)
+
+    Env:
+        PERSISTO_API_URL   Base URL (default: http://localhost:8000)
+    """
+
+    def __init__(self, api_key: str, base_url: Optional[str] = None, timeout: int = 15, retries: int = 3):
+        if not api_key:
+            raise ValueError("Missing API key")
         self.api_key = api_key
-        self.base_url = base_url.rstrip("/")
-        self.headers = {
-            "Authorization": f"Bearer {self.api_key}",
-            "Content-Type": "application/json"
+        self.base_url = (base_url or os.getenv("PERSISTO_API_URL") or "http://localhost:8000").rstrip("/")
+        self.timeout = int(timeout)
+        self.retries = max(0, int(retries))
+
+    # ---------- Public API ----------
+
+    def save(
+        self,
+        *,
+        namespace: str,
+        content: str,
+        metadata: Optional[Dict[str, Any]] = None,
+        ttl_seconds: Optional[int] = None,
+    ) -> Dict[str, Any]:
+        payload: Dict[str, Any] = {
+            "namespace": namespace,
+            "content": content,
+            "metadata": metadata or {},
         }
+        if ttl_seconds is not None:
+            payload["ttl_seconds"] = int(ttl_seconds)
+        return self._request("POST", "/memory/save", json=payload)
 
-    @retry(
-        stop=stop_after_attempt(3),
-        wait=wait_fixed(0.5),
-        retry=retry_if_exception_type((PersistoServerError, PersistoAuthError))
-    )
-    def _request(self, method: str, path: str, **kwargs):
-        url = f"{self.base_url}{path}"
-        try:
-            res = requests.request(method, url, headers=self.headers, **kwargs)
-            res.raise_for_status()
-            return res
-        except requests.exceptions.HTTPError as e:
-            status = e.response.status_code
-            if status == 401:
-                raise PersistoAuthError("Invalid API key") from e
-            elif status == 404:
-                raise PersistoNotFoundError("Resource not found") from e
-            elif status >= 500:
-                raise PersistoServerError("Server error") from e
-            raise
-        except RetryError as e:
-            # 🧠 Unwrap and raise the original cause so users don’t see RetryError
-            if e.last_attempt:
-                raise e.last_attempt._exception  # cleanest way to get the original
-            raise  # fallback: raise RetryError itself
+    def query(
+        self,
+        *,
+        namespace: str,
+        query: str,
+        filters: Optional[Dict[str, Any]] = None,
+        mode: Optional[str] = None,            # "strict" | "fuzzy" | "recency" (optional)
+        k: Optional[int] = None,               # optional override
+        profile: Optional[Dict[str, Any]] = None,  # ignored by server unless you add custom overrides
+    ) -> Dict[str, Any]:
+        payload: Dict[str, Any] = {
+            "namespace": namespace,
+            "query": query,
+            "filters": filters or {},
+        }
+        if mode:
+            payload["mode"] = mode
+        if k is not None:
+            payload["k"] = int(k)
+        if profile:
+            payload["profile"] = profile
+        return self._request("POST", "/memory/query", json=payload)
 
+    def delete(
+        self,
+        *,
+        namespace: str,
+        content: Optional[str] = None,
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        payload: Dict[str, Any] = {"namespace": namespace}
+        if content is not None:
+            payload["content"] = content
+        if metadata is not None:
+            payload["metadata"] = metadata
+        return self._request("DELETE", "/memory/delete", json=payload)
 
-    def save(self, namespace: str, content: str, metadata: Optional[dict] = None, ttl_seconds: Optional[int] = None) -> dict:
-        """
-        Save a memory to a namespace.
+    def list_namespaces(self) -> List[str]:
+        resp = self._request("GET", "/memory/namespaces")
+        return resp.get("namespaces", [])
 
-        Args:
-            namespace (str): Namespace for the memory.
-            content (str): Content to store.
-            metadata (dict, optional): Additional metadata.
-            ttl_seconds (int, optional): Time-to-live in seconds.
-
-        Returns:
-            dict: API response.
-        """
-        payload = MemorySaveRequest(
-            namespace=namespace,
-            content=content,
-            metadata=metadata or {},
-            ttl_seconds=ttl_seconds
-        )
-        res = self._request("POST", "/memory/save", json=payload.dict())
-        return res.json()
-
-    def query(self, namespace: str, query: str, filters: Optional[dict] = None, top_k: int = 5) -> list[dict]:
-        """
-        Query similar memories from a namespace.
-
-        Args:
-            namespace (str): Namespace to search in.
-            query (str): Search query.
-            filters (dict, optional): Metadata filters.
-            top_k (int): Number of results to return.
-
-        Returns:
-            list[dict]: Matching memory results.
-        """
-        payload = QueryRequest(
-            namespace=namespace,
-            query=query,
-            filters=filters or {},
-            top_k=top_k
-        )
-        res = self._request("POST", "/memory/query", json=payload.dict())
-        return res.json()["results"]
-
-    def delete(self, namespace: str, content: Optional[str] = None, metadata: Optional[dict] = None) -> dict:
-        """
-        Delete memories by content or metadata.
-
-        Args:
-            namespace (str): Namespace to delete from.
-            content (str, optional): Specific content to match.
-            metadata (dict, optional): Metadata match filter.
-
-        Returns:
-            dict: API response.
-        """
-        payload = DeleteRequest(
-            namespace=namespace,
-            content=content,
-            metadata=metadata
-        )
-        res = self._request("DELETE", "/memory/delete", json=payload.dict())
-        return res.json()
-
-    def list_namespaces(self) -> list[str]:
-        """
-        List all namespaces associated with the API key.
-
-        Returns:
-            list[str]: List of namespace strings.
-        """
-        res = self._request("GET", "/memory/namespaces")
-        return res.json()["namespaces"]
-
-    def list_queries(self, namespace: Optional[str] = None, start_date: Optional[str] = None, end_date: Optional[str] = None) -> list:
-        """
-        List historical memory queries.
-
-        Args:
-            namespace (str, optional): Filter by namespace.
-            start_date (str, optional): ISO start date filter.
-            end_date (str, optional): ISO end date filter.
-
-        Returns:
-            list: List of past queries.
-        """
-        params = {}
+    def list_queries(
+        self,
+        *,
+        namespace: Optional[str] = None,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+    ) -> List[Dict[str, Any]]:
+        params: Dict[str, Any] = {}
         if namespace:
             params["namespace"] = namespace
         if start_date:
             params["start_date"] = start_date
         if end_date:
             params["end_date"] = end_date
+        resp = self._request("GET", "/queries/list", params=params)
+        return resp.get("queries", [])
 
-        res = self._request("GET", "/queries/list", params=params)
-        return res.json()["queries"]
+    # ---------- Internal HTTP ----------
+
+    def _request(
+        self,
+        method: str,
+        path: str,
+        *,
+        json: Optional[Dict[str, Any]] = None,
+        params: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        url = f"{self.base_url}{path}"
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+        }
+
+        attempt = 0
+        backoff = 0.5
+        while True:
+            try:
+                if method.upper() == "GET":
+                    r = requests.get(url, headers=headers, params=params, timeout=self.timeout)
+                elif method.upper() in ("POST", "PUT", "PATCH", "DELETE"):
+                    r = requests.request(method.upper(), url, headers=headers, json=json, params=params, timeout=self.timeout)
+                else:
+                    raise PersistoError(f"Unsupported HTTP method: {method}")
+            except requests.RequestException as e:
+                if attempt >= self.retries:
+                    raise PersistoError(f"Network error after {attempt+1} attempts: {e}")
+                attempt += 1
+                time.sleep(backoff)
+                backoff *= 2
+                continue
+
+            # error handling
+            if r.status_code in (401, 403):
+                raise PersistoAuthError("Unauthorized: invalid API key or insufficient scope", status=r.status_code, body=r.text)
+            if r.status_code == 404:
+                raise PersistoNotFoundError("Not found", status=r.status_code, body=r.text)
+            if r.status_code == 429:
+                if attempt >= self.retries:
+                    raise PersistoRateLimitError("Rate limited", status=r.status_code, body=r.text)
+                retry_after = r.headers.get("Retry-After")
+                sleep_s = float(retry_after) if retry_after and retry_after.isdigit() else backoff
+                time.sleep(sleep_s)
+                attempt += 1
+                backoff *= 2
+                continue
+            if 500 <= r.status_code < 600:
+                if attempt >= self.retries:
+                    raise PersistoError(f"Server error {r.status_code}", status=r.status_code, body=r.text)
+                attempt += 1
+                time.sleep(backoff)
+                backoff *= 2
+                continue
+
+            # success
+            if r.status_code == 204 or not r.content:
+                return {}
+            try:
+                return r.json()
+            except ValueError:
+                return {"raw": r.text}
