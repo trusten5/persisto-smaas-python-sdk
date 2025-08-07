@@ -59,5 +59,12 @@ def insert_memory_query(user_id: str, namespace: str, query_text: str, filters: 
     )
     conn.commit()
 
+def get_namespaces_by_user(user_id: str) -> list[str]:
+    cursor.execute(
+        "SELECT DISTINCT namespace FROM memories WHERE user_id = %s",
+        (user_id,)
+    )
+    return [row[0] for row in cursor.fetchall()]
+
 def commit():
     conn.commit()

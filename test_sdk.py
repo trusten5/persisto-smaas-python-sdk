@@ -3,7 +3,7 @@ from sdk.python.persisto.client import PersistoClient
 
 client = PersistoClient(api_key="your-api-key")
 
-API_KEY = "ekN79KPtP476Un-TyZEVlSMqocUVfBIYRTQEEkeN6AI"
+API_KEY = "<key>"
 
 client = PersistoClient(api_key=API_KEY)
 
