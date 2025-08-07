@@ -1,142 +1,202 @@
 # 🧠 Persisto AI
 
-**Semantic Memory-as-a-Service (SMaaS)** for LLM applications — built to give your AI apps long-term memory out of the box.
+**Semantic Memory-as-a-Service (SMaaS)** for LLM-powered applications.
+
+> Give your AI agents persistent memory — no vector DB setup, no boilerplate, no drift.
 
 ---
 
-## 🧩 What Is Persisto?
+## 🧩 What is Persisto?
 
-Persisto AI is a developer-first memory backend for AI agents, chatbots, and LLM-powered tools. It provides:
+Persisto is a plug-and-play memory backend for LLM apps, agents, and chatbots. It handles:
 
-- Persistent memory storage via `save()`
-- Fast semantic retrieval via `query()`
-- Built-in text chunking, OpenAI embeddings, and pgvector
-- Metadata filters for structured retrieval
-- Modular, production-grade architecture (FastAPI + Supabase)
+* ✅ Memory saving, querying, and deletion
+* ✅ OpenAI embedding + `pgvector` similarity search
+* ✅ TTL/expiry support for short-lived memory
+* ✅ Metadata filtering + structured search
+* ✅ Fully working Python SDK with retries, error handling, and test script
 
-It abstracts away vector DBs, embedding calls, and memory logic — so you can focus on building intelligent apps, not infrastructure.
+Use Persisto to **recall facts, track preferences, or power retrieval-augmented generation (RAG)** — with clean APIs and no infrastructure overhead.
 
 ---
 
 ## 💡 Why Use Persisto?
 
 LLMs forget. Agents drift. Context disappears.
+Persisto solves this with **long-term, queryable memory** that just works:
 
-Persisto solves this by acting as a **long-term memory layer** for AI workflows:
+* 🧠 Save memory chunks by namespace
+* 🔍 Retrieve by semantic similarity and metadata filters
+* ⏳ Expire memory after N seconds (`ttl_seconds`)
+* ⚙️ Use a simple Python SDK or REST API
+* 🔐 Scoped by user with API key auth
 
-- 🧠 Recall facts, past interactions, or user preferences
-- 🔍 Retrieve relevant memories using natural language queries
-- ⚙️ Attach metadata (timestamps, sources, tags) for smarter filtering
-- 🪄 Plug into any AI app — no infrastructure or setup required
-
----
-
-## 🚀 Current Feature Set (v0.1)
-
-| Feature             | Description                                                      |
-|---------------------|------------------------------------------------------------------|
-| ✅ Save API          | `POST /memory/save` with `namespace`, `content`, and `metadata` |
-| ✅ Query API         | `POST /memory/query` with `namespace`, `query`, and filters     |
-| ✅ Embedding Engine  | Uses OpenAI `text-embedding-3-small`                            |
-| ✅ Vector Search     | Postgres + `pgvector` similarity ranking                        |
-| ✅ Chunking Engine   | Naive character-based chunking (modularized)                    |
-| ✅ Metadata Filters  | JSONB-based filtering on metadata keys                          |
+You focus on building smart apps — Persisto handles memory.
 
 ---
 
-## 🛠️ How to Use
+## 🔧 Quick Start
 
-### 🧪 Save a memory
+### 1. Install the SDK
 
 ```bash
-curl -X POST http://127.0.0.1:8000/memory/save \
-  -H "Content-Type: application/json" \
-  -d '{
-        "namespace": "demo-agent",
-        "content": "The user prefers concise, structured summaries.",
-        "metadata": { "source": "profile", "user_id": "abc123" }
-      }'
-````
+pip install persisto-ai
+```
 
-This will:
-
-* Automatically chunk the content (if long)
-* Embed it with OpenAI
-* Store in `memories` table with metadata and namespace
+> ⚙️ Alternatively, clone the repo and run `python test_sdk.py` after setting your `.env`.
 
 ---
 
-### 🔍 Query memory
+### 2. Save a memory
 
-```bash
-curl -X POST http://127.0.0.1:8000/memory/query \
-  -H "Content-Type: application/json" \
-  -d '{
-        "namespace": "demo-agent",
-        "query": "How does the user like their output?",
-        "filters": { "source": "profile" },
-        "top_k": 3
-      }'
+```python
+from persisto import PersistoClient
+
+client = PersistoClient(api_key="your-api-key")
+
+client.save(
+    namespace="demo-agent",
+    content="The user prefers concise summaries.",
+    metadata={"source": "profile"}
+)
 ```
-
-Returns top-k memory chunks by semantic relevance (cosine similarity), filtered by metadata.
 
 ---
 
-## 📦 Architecture
+### 3. Query memory
 
+```python
+results = client.query(
+    namespace="demo-agent",
+    query="How does the user like their output?",
+    filters={"source": "profile"}
+)
+
+for r in results:
+    print(r["content"], r["similarity"])
 ```
+
+---
+
+## ⚙️ Architecture Overview
+
+```text
+sdk/python/persisto/     # Python SDK (retry logic, typed errors)
 backend/
-├── main.py                # FastAPI app entry
-├── db.py                  # DB connection (Supabase + pgvector)
-├── routers/
-│   └── memory.py          # /memory/save and /memory/query endpoints
-├── services/
-│   ├── memory_service.py  # Chunk, embed, store, and query memory
-│   └── embed_service.py   # OpenAI embedding logic
-├── utils/
-│   └── chunker.py         # Chunking logic (e.g., split by chars/paras)
+├── main.py              # FastAPI app entry
+├── routers/memory.py    # REST endpoints: /save, /query, /delete
+├── services/            # Embedding, DB, memory logic
+├── utils/               # Chunking, auth, helpers
 ```
+
+---
+
+## ✅ Completed Features (V1.0 + V1.5)
+
+### 🧠 Memory Infrastructure
+
+* `.save()`, `.query()`, `.delete()` APIs
+* Text chunking + OpenAI embeddings
+* `pgvector` top-k semantic search
+* Structured filtering via metadata
+* API key–based user isolation
+
+### 🧰 SDK Polish
+
+* Full Python SDK
+* Retry logic via `tenacity`
+* Typed SDK errors (e.g. `PersistoAuthError`, `PersistoNotFoundError`)
+* `.env` support and test suite
+
+### ⏳ TTL / Expiry Support
+
+* `ttl_seconds` in `.save()`
+* `expires_at` column in DB
+* Expired memories excluded from queries
+
+### 🪪 Query History API
+
+* `/queries/list` endpoint
+* `.list_queries()` in SDK
+* Filter by namespace and time
 
 ---
 
 ## 🛣️ Roadmap
 
-**V1 (now):**
+### 🔷 V2.0 – Power Tools for Devs *(Next)*
 
-* [x] Hosted memory API (`save`, `query`)
-* [x] OpenAI embedding + pgvector
-* [x] Chunking engine
-* [x] Metadata tagging & filtering
-* [ ] Python & JS SDKs
-* [ ] LangChain + OpenAI Assistant templates
+* Retrieval Profiles: `strict`, `fuzzy`, `recency`
+* `summarize_old()` — LLM-based memory compression
+* JS/TS SDK
+* Scoped tokens + project-based auth
+* TTL cleanup script (optional)
 
-**V2:**
+### 🔶 V3.0 – Persisto Cloud *(Hosted Platform)*
 
-* [ ] Summarization & memory condensing
-* [ ] Customizable memory lifespan
-* [ ] Plug-and-play vector DB switching
-* [ ] Personalized scoring logic
+* Hosted dashboard + usage metrics
+* Interactive playground
+* Org/project system with team access
+* API keys + usage billing
 
-**V3:**
+### 🔷 V4.0 – The RAG Engine *(Infra Toolkit)*
 
-* [ ] Memory dashboard (Next.js)
-* [ ] Multi-agent collaboration & projects
-* [ ] Advanced memory primitives (episodic recall, triggers)
-* [ ] Logging & audit analytics
+* Hybrid search (vector + keyword)
+* BYO embedder + summarizer
+* Declarative config: `persisto.config.json`
+* LangChain / LlamaIndex adapters
+* GitHub RAG chatbot template
 
 ---
 
-## 💡 Use Cases
+## 💼 Use Cases
 
-* Agent memory in multi-turn LLM tools
-* User preference recall in AI copilots
-* Semantic search in document assistants
-* Context persistence across sessions
-* Memory for LangChain or OpenAI Assistants
+* Memory for multi-turn AI agents
+* Preference recall in LLM copilots
+* Long-term document understanding
+* Semantic search + RAG pipelines
+* Personalization across sessions
+
+---
+
+## 📦 Tech Stack
+
+* Python (FastAPI, Pydantic, Requests)
+* Supabase (PostgreSQL + pgvector)
+* OpenAI embeddings (`text-embedding-3-small`)
+* Tenacity (retry logic)
+* dotenv (`.env` config for SDK)
+* Future: TS SDK, hosted dashboard, LangChain adapters
+
+---
+
+## 🚀 Vision
+
+> Persisto is building the **Vercel for RAG**
+> A fully hosted, developer-first platform to deploy AI memory, retrieval, and context systems — in one line of code.
+
+* No infra setup
+* No vector DB config
+* Just `.save()` and `.query()` memory — and you're live
+
+---
+
+## 👇 Try It Locally
+
+```bash
+# Start backend server
+uvicorn backend.main:app --reload
+
+# Run the test script
+python test_sdk.py
+```
+
+> Configure your `.env` with your API key (from Supabase).
 
 ---
 
 ## 🧠 Persisto gives your AI a brain.
 
-Build intelligent, context-aware LLM applications — faster and simpler.
+Build memory-aware agents.
+Ship smarter assistants.
+Deploy production-ready RAG in minutes.
