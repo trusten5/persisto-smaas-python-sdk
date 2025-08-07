@@ -51,6 +51,10 @@ async def save_memory(payload: MemoryPayload, request: Request):
 async def query_memory(payload: QueryPayload, request: Request):
     user_id = await get_user_id_from_api_key(request)
     results = memory_service.query_similar_memories(payload.namespace, payload.query, payload.filters, user_id=user_id)
+
+    if not results:
+        raise HTTPException(status_code=404, detail="No relevant memories found.")
+
     return {"results": results}
 
 @router.delete("/memory/delete")

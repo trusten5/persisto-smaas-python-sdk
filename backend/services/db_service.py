@@ -32,7 +32,8 @@ def delete_memories(user_id: str, namespace: str, content: str | None, metadata:
     return count
 
 def query_memories(user_id: str, namespace: str, embedding: list[float], filters: dict, top_k: int):
-    print("[DEBUG] expires_at filter active")
+    # Debug
+    # print("[DEBUG] expires_at filter active")
 
     base_query = """
         SELECT content, metadata, embedding <-> %s::vector AS similarity
@@ -54,24 +55,26 @@ def query_memories(user_id: str, namespace: str, embedding: list[float], filters
     # ✅ These must come after all filters are added
     params.extend([embedding, top_k])
 
-    print("[DEBUG] SQL Query:", base_query)
+    # Debug
+    # print("[DEBUG] SQL Query:", base_query)
 
     cursor.execute(base_query, params)
     results = cursor.fetchall()
-
-    print("[DEBUG] Results returned:", len(results))
-    for row in results:
-        if row[0] == "This memory will self-destruct":
-            print("[DEBUG] ❌ Expired memory leaked through:", row)
-    for row in results:
-        if "self-destruct" in row[0]:
-            print("[DEBUG] ⏱ Expired? Checking timestamp in DB...")
-            cursor.execute(
-                "SELECT expires_at FROM memories WHERE content = %s AND user_id = %s",
-                (row[0], user_id)
-            )
-            expiration_check = cursor.fetchall()
-            print("[DEBUG] → expires_at values:", expiration_check)
+    
+    # Debug Section 
+    # print("[DEBUG] Results returned:", len(results))
+    # for row in results:
+    #     if row[0] == "This memory will self-destruct":
+    #         print("[DEBUG] ❌ Expired memory leaked through:", row)
+    # for row in results:
+    #     if "self-destruct" in row[0]:
+    #         print("[DEBUG] ⏱ Expired? Checking timestamp in DB...")
+    #         cursor.execute(
+    #             "SELECT expires_at FROM memories WHERE content = %s AND user_id = %s",
+    #             (row[0], user_id)
+    #         )
+    #         expiration_check = cursor.fetchall()
+    #         print("[DEBUG] → expires_at values:", expiration_check)
 
 
     return results

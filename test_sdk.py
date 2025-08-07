@@ -1,4 +1,4 @@
-from sdk.python.persisto.client import PersistoClient
+from sdk.python.persisto.client import PersistoClient, PersistoNotFoundError, PersistoAuthError
 import os
 import time
 from dotenv import load_dotenv
@@ -78,3 +78,13 @@ print("\nListing past queries...")
 queries = client.list_queries(namespace="auth-test")
 for q in queries:
     print(q)
+
+try:
+    print("\nTesting nonexistent query (should raise 404)...")
+    client.query("nonexistent", "test")
+except PersistoNotFoundError:
+    print("✅ Caught 404")
+except PersistoAuthError:
+    print("❌ Invalid API key")
+except Exception as e:
+    print(f"❌ Unexpected error: {e}")
