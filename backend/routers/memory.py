@@ -50,3 +50,8 @@ async def delete_memory(req: MemoryDeleteRequest, request: Request):
     if deleted_count == 0:
         raise HTTPException(status_code=404, detail="No matching memory found.")
     return {"status": "deleted", "count": deleted_count}
+
+@router.get("/memory/namespaces")
+async def get_namespaces(request: Request):
+    user_id = await get_user_id_from_api_key(request)
+    return {"namespaces": memory_service.list_namespaces(user_id)}

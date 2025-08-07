@@ -1,9 +1,8 @@
 # backend/services/memory_service.py
 from utils.chunker import chunk_text
-from services.db_service import insert_memory, query_memories, commit, insert_memory_query, delete_memories
+from services.db_service import insert_memory, query_memories, commit, insert_memory_query, delete_memories, get_namespaces_by_user
 from services.embedder import BaseEmbedder
 from services.openai_embedder import OpenAIEmbedder
-
 
 class MemoryService:
     def __init__(self, embedder: BaseEmbedder = OpenAIEmbedder()):
@@ -31,3 +30,6 @@ class MemoryService:
     
     def delete_memory(self, namespace: str, content: str | None, metadata: dict | None, user_id: str = None) -> int:
         return delete_memories(user_id, namespace, content, metadata)
+    
+    def list_namespaces(self, user_id: str) -> list[str]:
+        return get_namespaces_by_user(user_id)

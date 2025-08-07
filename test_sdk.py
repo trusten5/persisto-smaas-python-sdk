@@ -1,11 +1,13 @@
 # test_sdk.py
 from sdk.python.persisto.client import PersistoClient
+import os
+from dotenv import load_dotenv
 
-client = PersistoClient(api_key="your-api-key")
+load_dotenv()
 
-API_KEY = "<key>"
+api_key = os.getenv("PERSISTO_API_KEY")
 
-client = PersistoClient(api_key=API_KEY)
+client = PersistoClient(api_key)
 
 print("\nSaving memory...")
 save_response = client.save(
@@ -13,7 +15,20 @@ save_response = client.save(
     content="This memory should be saved with auth",
     metadata={"source": "sdk-auth"}
 )
-print("Save response:", save_response)
+print("Save response 1:", save_response)
+save_response = client.save(
+    namespace="demo-test",
+    content="I like soccer",
+    metadata={"source": "sdk-auth"}
+)
+print("Save response 2:", save_response)
+
+save_response = client.save(
+    namespace="auth-test",
+    content="I am using auth",
+    metadata={"source": "test"}
+)
+print("Save response 3:", save_response)
 
 print("\nQuerying memory...")
 query_results = client.query(
@@ -29,3 +44,5 @@ delete_response = client.delete(
 )
 print("Delete response:", delete_response)
 
+print("\nListing namespaces...")
+print("Namespaces:", client.list_namespaces())

@@ -68,3 +68,12 @@ class PersistoClient:
         )
         res.raise_for_status()
         return res.json()
+    
+    def list_namespaces(self) -> list[str]:
+        """
+        List all users namespaces
+        """
+        res = requests.get(f"{self.base_url}/memory/namespaces", headers=self.headers)
+        res.raise_for_status()
+        return res.json()["namespaces"]
+
