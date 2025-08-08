@@ -1,16 +1,17 @@
 # test_sdk.py
 from sdk.python.persisto.client import PersistoClient, PersistoNotFoundError, PersistoAuthError
+from backend.utils.retrieval_profiles import DEFAULT_PROFILES
 import os
 import time
 from dotenv import load_dotenv
 from uuid import uuid4
 
-unique_ttl_content = f"This memory will self-destruct: test-{uuid4()}"
-
 load_dotenv()
-
 api_key = os.getenv("PERSISTO_API_KEY")
 client = PersistoClient(api_key)
+
+# Unique TTL memory
+unique_ttl_content = f"This memory will self-destruct: test-{uuid4()}"
 
 def print_result_label(label, res):
     print(f"\n{label}")
@@ -24,100 +25,68 @@ def print_result_label(label, res):
     else:
         print(res)
 
-# 🔹 Seed a few memories that help profile tests
+# print("\nCleaning up old test data...")
+# client.delete(namespace="profiles-test", metadata={"topic": "sports"})
+# client.delete(namespace="auth-test", metadata={"source": "sdk-auth"})
+# client.delete(namespace="demo-test", metadata={"source": "sdk-auth"})
+
+# 🔹 Seed memories
 print("\nSeeding profile test memories...")
 client.save(namespace="profiles-test", content="The team won the soccer match in overtime.", metadata={"topic": "sports"})
 client.save(namespace="profiles-test", content="We discussed quarterly revenue growth of 24% YoY.", metadata={"topic": "finance"})
 client.save(namespace="profiles-test", content="New UI components were added to the design system.", metadata={"topic": "eng"})
 
-# 🔹 Standard Save Tests
 print("\nSaving memory...")
-save_response = client.save(
-    namespace="auth-test",
-    content="This memory should be saved with auth",
-    metadata={"source": "sdk-auth"}
-)
-print("Save response 1:", save_response)
-
-save_response = client.save(
-    namespace="demo-test",
-    content="I like soccer",
-    metadata={"source": "sdk-auth"}
-)
-print("Save response 2:", save_response)
-
-save_response = client.save(
-    namespace="auth-test",
-    content="I am using auth",
-    metadata={"source": "test"}
-)
-print("Save response 3:", save_response)
+print("Save response 1:", client.save(namespace="auth-test", content="This memory should be saved with auth", metadata={"source": "sdk-auth"}))
+print("Save response 2:", client.save(namespace="demo-test", content="I like soccer", metadata={"source": "sdk-auth"}))
+print("Save response 3:", client.save(namespace="auth-test", content="I am using auth", metadata={"source": "test"}))
 
 # 🔹 TTL Test
 print("\nSaving short-lived memory (TTL = 3s)...")
-ttl_response = client.save(
-    namespace="auth-test",
-    content=unique_ttl_content,
-    metadata={"source": "ttl-test"},
-    ttl_seconds=3
-)
-print("TTL save response:", ttl_response)
-
+print("TTL save response:", client.save(namespace="auth-test", content=unique_ttl_content, metadata={"source": "ttl-test"}, ttl_seconds=3))
 print("Waiting 4 seconds for TTL to expire...")
 time.sleep(4)
 
 print("Querying for expired memory...")
-query_results = client.query(
-    namespace="auth-test",
-    query="self-destruct"
-)
-print("Query results (should NOT include TTL memory):", query_results)
+print("Query results (should NOT include TTL memory):", client.query(namespace="auth-test", query="self-destruct"))
 
 # 🔹 Regular Query Test
 print("\nQuerying memory...")
-query_results = client.query(
-    namespace="auth-test",
-    query="What memory did I just save?"
-)
-print("Query results:", query_results)
+print("Query results:", client.query(namespace="auth-test", query="What memory did I just save?"))
 
-# 🔷 Retrieval Profiles — smoke tests
-print("\n=== Retrieval Profiles (strict | fuzzy | recency) ===")
+# 🔷 Retrieval Profiles — diagnostic version
+print("\n=== Retrieval Profiles Diagnostic ===")
+test_queries = {
+    "far": "football results",      # likely below fuzzy threshold
+    "close": "soccer match results" # likely above fuzzy threshold
+}
 
-# Use a deliberately loose query against sports content to see fuzzy bring something back even if strict is picky.
-strict_res = client.query(namespace="profiles-test", query="football results", mode="strict", k=10)
-print_result_label("STRICT results", strict_res)
+for profile_name, profile in DEFAULT_PROFILES.items():
+    print(f"\n--- Profile: {profile_name.upper()} ---")
+    print(f"min_sim = {profile.min_sim}")
 
-fuzzy_res = client.query(namespace="profiles-test", query="football results", mode="fuzzy", k=20)
-print_result_label("FUZZY results", fuzzy_res)
+    for q_label, q_text in test_queries.items():
+        res = client.query(namespace="profiles-test", query=q_text, mode=profile_name, k=10)
+        print_result_label(f"{profile_name.upper()} | {q_label} query: \"{q_text}\"", res)
 
-# Recency will be subtle without big time gaps; still call to ensure the parameter is accepted and returns.
-recency_res = client.query(namespace="profiles-test", query="recent announcements or updates", mode="recency", k=10)
-print_result_label("RECENCY results", recency_res)
-
-# Optional: a small heuristic check (non-failing) to observe that fuzzy tends to return >= strict
+# Heuristic fuzzy vs strict length
 try:
-    strict_len = len(strict_res.get("results", []))
-    fuzzy_len  = len(fuzzy_res.get("results", []))
-    print(f"\nHeuristic: fuzzy count ({fuzzy_len}) vs strict count ({strict_len})")
+    strict_close = len(client.query(namespace="profiles-test", query=test_queries["close"], mode="strict").get("results", []))
+    fuzzy_close = len(client.query(namespace="profiles-test", query=test_queries["close"], mode="fuzzy").get("results", []))
+    print(f"\nHeuristic: fuzzy close-count ({fuzzy_close}) vs strict close-count ({strict_close})")
 except Exception:
     pass
 
 # 🔹 Delete Test
 print("\nDeleting memory...")
-delete_response = client.delete(
-    namespace="auth-test",
-    metadata={"source": "sdk-auth"}
-)
-print("Delete response:", delete_response)
+print("Delete response:", client.delete(namespace="auth-test", metadata={"source": "sdk-auth"}))
 
 # 🔹 List Namespaces Test
 print("\nListing namespaces...")
 print("Namespaces:", client.list_namespaces())
 
 print("\nListing past queries...")
-queries = client.list_queries(namespace="auth-test")
-for q in queries:
+for q in client.list_queries(namespace="auth-test"):
     print(q)
 
 try:
@@ -130,9 +99,7 @@ except PersistoAuthError:
 except Exception as e:
     print(f"❌ Unexpected error: {e}")
 
-
-# EASY Test
-
+# EASY Controls
 print("\nControl: exact-ish match in demo-test")
 print(client.query(namespace="demo-test", query="I like soccer", mode="fuzzy", k=10))
 

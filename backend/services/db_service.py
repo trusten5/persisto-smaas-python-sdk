@@ -42,9 +42,11 @@ def query_memories(user_id: str, namespace: str, embedding: list[float], filters
     Returns rows with:
       id, content, metadata, created_at, similarity
 
-    - Still ORDER BY distance for speed
-    - But SELECT true similarity = 1 - distance (with cosine opclass)
+    - Orders by distance ASC for speed
+    - SELECTs true similarity = 1 - distance (cosine opclass)
     - Excludes expired rows
+    - Applies filter-based metadata matching
+    NOTE: No hardcoded similarity filtering — handled by retrieval profiles
     """
     base_query = """
         SELECT
@@ -68,7 +70,7 @@ def query_memories(user_id: str, namespace: str, embedding: list[float], filters
         params.append(str(value))
 
     base_query += """
-        ORDER BY embedding <-> %s::vector   -- distance ASC
+        ORDER BY embedding <-> %s::vector   -- order by distance ASC
         LIMIT %s
     """
     params.extend([embedding, top_k])
