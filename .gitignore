@@ -45,4 +45,4 @@ node_modules/
 
 # Supabase CLI artifacts (if used)
 .supabase/
-supabase/.temp/
+supabase/.temp/backend/
