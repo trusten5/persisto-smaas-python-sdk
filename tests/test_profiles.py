@@ -11,7 +11,7 @@ DEBUG_SHOW_RAW = True  # show kwargs and a peek at raw responses
 # SDK import
 # ----------------------------
 try:
-    from sdk.python.persisto.client import PersistoClient
+    from persisto.client import PersistoClient
 except Exception as e:
     print("Failed to import PersistoClient. Check your SDK path.\n", e)
     sys.exit(1)
@@ -19,18 +19,16 @@ except Exception as e:
 # ----------------------------
 # Profiles (for printing only)
 # ----------------------------
-try:
-    from backend.utils.retrieval_profiles import DEFAULT_PROFILES
-except Exception:
-    class _P:
-        def __init__(self, name, min_sim):
-            self.name = name
-            self.min_sim = min_sim
-    DEFAULT_PROFILES = {
-        "strict": _P("strict", 0.55),
-        "fuzzy":  _P("fuzzy", 0.25),
-        "recency": _P("recency", 0.30),
-    }
+
+class _P:
+    def __init__(self, name, min_sim):
+        self.name = name
+        self.min_sim = min_sim
+DEFAULT_PROFILES = {
+    "strict": _P("strict", 0.55),
+    "fuzzy":  _P("fuzzy", 0.25),
+    "recency": _P("recency", 0.30),
+}
 
 # ----------------------------
 # Helpers
