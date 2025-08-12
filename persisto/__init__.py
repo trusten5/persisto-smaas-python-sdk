@@ -1,2 +1,5 @@
-# sdk/python/persisto/__init__.py
-from .client import PersistoClient
+from .client import PersistoClient as Client
+from .errors import PersistoAuthError
+
+__all__ = ["Client", "PersistoAuthError"]
+
