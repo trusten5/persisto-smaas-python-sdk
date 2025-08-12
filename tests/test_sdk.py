@@ -1,10 +1,19 @@
 # test_sdk.py
-from sdk.python.persisto.client import PersistoClient, PersistoNotFoundError, PersistoAuthError
-from backend.utils.retrieval_profiles import DEFAULT_PROFILES
+from persisto.client import PersistoClient, PersistoNotFoundError, PersistoAuthError
 import os
 import time
 from dotenv import load_dotenv
 from uuid import uuid4
+
+class _P:
+    def __init__(self, name, min_sim):
+        self.name = name
+        self.min_sim = min_sim
+DEFAULT_PROFILES = {
+    "strict": _P("strict", 0.55),
+    "fuzzy":  _P("fuzzy", 0.25),
+    "recency": _P("recency", 0.30),
+}
 
 load_dotenv()
 api_key = os.getenv("PERSISTO_API_KEY")

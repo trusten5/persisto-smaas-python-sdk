@@ -50,3 +50,8 @@ __pycache__/
 .env
 .env.*
 .DS_Store
+.venv/
+__pycache__/
+.env
+.env.*
+.DS_Store
