@@ -3,20 +3,36 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "persisto"
+name = "persisto"                    # or persisto-sdk / persisto-client
 version = "0.1.0"
-description = "Python SDK for the Persisto semantic memory API"
+description = "Developer SDK for Persisto: a persistent memory layer for AI apps"
 readme = "README.md"
 requires-python = ">=3.9"
 license = { text = "Proprietary" }
-authors = [{ name = "Trusten", email = "tlehmannkarp@g.hmc.edu" }]
+authors = [{ name = "Trusten", email = "trusten.lehmannkarp@gmail.com" }]
 dependencies = [
-  "httpx>=0.26",
+  "requests>=2.31",
   "pydantic>=2.5",
   "tenacity>=8.2",
-  "requests>=2.31",
-  "python-dotenv>=1.0",
 ]
+
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "License :: Other/Proprietary License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Software Development :: Libraries",
+]
+
+[project.urls]
+Homepage = "https://github.com/trusten5/persisto-smaas-python-sdk"
+Documentation = "https://github.com/trusten5/persisto-smaas-python-sdk#readme"
+Issues = "https://github.com/trusten5/persisto-smaas-python-sdk/issues"
 
 [tool.setuptools]
 packages = ["persisto"]
